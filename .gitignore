@@ -1,0 +1,38 @@
+# Python bytecode files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# PyCharm project files
+.idea/
+
+# Virtual environment
+venv/
+env/
+
+# Ignore MacOS system files
+.DS_Store
+
+# OS-specific files (Windows)
+Thumbs.db
+desktop.ini
+
+# Ignore Jupyter Notebook checkpoints (if any notebooks are in the project)
+.ipynb_checkpoints/
+
+# Python package files
+*.egg
+*.egg-info/
+dist/
+build/
+*.egg-info/
+
+# Cache files
+*.cache
+*.mypy_cache/
+*.pytest_cache/
+
+
+# Ignore everything in the results folder
+results/*
+
