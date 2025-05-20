@@ -25,14 +25,7 @@ def compute_metafeatures_for_dataset(X, y, random_state, categorical_column_name
 
 
 def extract_metafeatures(X, y, random_state, categorical_column_names, metafeature_type):
-    # metafeature_groups = [
-    #     "statistical",
-    #     "general",
-    #     "clustering",
-    #     "concept",
-    #     "complexity",
-    #     "landmarking",
-    # ]
+
     results_names, results_values = [], []
 
     for group in metafeature_type:

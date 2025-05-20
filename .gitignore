@@ -25,7 +25,6 @@ desktop.ini
 *.egg-info/
 dist/
 build/
-*.egg-info/
 
 # Cache files
 *.cache
