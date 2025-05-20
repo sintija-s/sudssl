@@ -10,7 +10,7 @@ SUDSSL is a framework for subsampling the unlabeled data for self-supervised lea
 Our methodology examines whether selecting unlabeled examples can maintain the predictive performance of a
 tabular self-supervised classifier while cutting down computation costs.
 
-![Methodology Overview](images/methodology_embeddings.png)
+![Methodology Overview](images/methodology_embeddings.svg)
 
 Built using Python 3.12.2.
 
