@@ -57,13 +57,13 @@ python main.py --model "tabnet" --dataset 3 --seed 2 --n_labeled 50 --sampling_m
 ```
 
 Arguments:
-- **`--model`**: The self-supervised model that will be evaluated. Currently, the scirpt supports "tabnet" or "scarf".
-- **`--dataset`**: The ID of the OpenML dataset to be used.
-- **`--seed`**: Random seed (default set to 42).
-- **`--n_labeled`**: Number of labeled examples to use.
-- **`--sampling_method`**: The sampling method to use. Options: "random", "consensus_ds", "consensus_dt", "baseline_all", "baseline_none".
-- **`--n_unlabeled`**: Number of unlabeled examples to select; used only when **`--sampling_method`** is "random", "consensus_ds", or "consensus_dt".
-- **`--bracket`**: Sampling bracket, put it as `"[minimum_value, maximum_value]"`; used only when **`--sampling_method`** is either "consensus_ds", or "consensus_dt".
+- `--model`: The self-supervised model that will be evaluated. Currently, the scirpt supports "tabnet" or "scarf".
+- `--dataset`: The ID of the OpenML dataset to be used.
+- `--seed`: Random seed (default set to 42).
+- `--n_labeled`: Number of labeled examples to use.
+- `--sampling_method`: The sampling method to use. Options: "random", "consensus_ds", "consensus_dt", "baseline_all", "baseline_none".
+- `--n_unlabeled`: Number of unlabeled examples to select; used only when `--sampling_method` is "random", "consensus_ds", or "consensus_dt".
+- `--bracket`: Sampling bracket, put it as `"[minimum_value, maximum_value]"`; used only when `--sampling_method` is either "consensus_ds", or "consensus_dt".
 
 # Extracting metafeatures
 
@@ -75,7 +75,7 @@ Below is an example of how to run it:
 python extract_metafeatures.py --dataset "3,6" --metafeature_type "statistical, clustering"
 ```
 Arguments:
-- **`--dataset`**: The ID of the OpenML dataset for which the metafeatures are extracted.
-- **`--metafeature_type`**: Metafeature type, as defined by the PyMFE library. Options: "clustering", "complexity", 
+- `--dataset`: The ID of the OpenML dataset for which the metafeatures are extracted.
+- `--metafeature_type`: Metafeature type, as defined by the PyMFE library. Options: "clustering", "complexity", 
 "concept", "general", "info-theory", "itemset", "landmarking", "model-based", and "statistical".
 
