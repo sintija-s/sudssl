@@ -6,15 +6,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from scipy.stats import norm
-from skactiveml.classifier import MixtureModelClassifier
-from skactiveml.classifier import SklearnClassifier
-from skactiveml.pool import FourDs as SKFourDs
-from skactiveml.pool import UncertaintySampling as SKUncertaintySampling
-from skactiveml.utils import MISSING_LABEL
 from sklearn.decomposition import PCA
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.mixture import GaussianMixture
-from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 from torch.utils.data import DataLoader, TensorDataset
 
@@ -147,77 +139,6 @@ class RandomSampling(SamplingMethod):
         indices = np.random.choice(len(x_train_unlab), size=n_sample, replace=False)
         end_time = time.time()
         return x_train_unlab[indices], [-1]*len(indices), 0, end_time - start_time
-
-# Package documentation: https://scikit-activeml.github.io/scikit-activeml-docs/latest/
-class UncertaintySampling(SamplingMethod):
-    def __init__(self, clf_unc='RF'):
-        super().__init__()
-        if clf_unc not in ['RF', 'SVM', 'BNN']:
-            raise ValueError("Classifier for uncertainty must be in ['RF', 'SVM', 'BNN']")
-        self.clf_unc_name = clf_unc
-        self.name += f"({clf_unc})"
-        
-    def score(self, x_train_lab, x_train_unlab, y_train_lab, seed):
-        qs = SKUncertaintySampling(method='least_confident', random_state=seed)
-        if self.clf_unc_name == 'RF':
-            clf_base = RandomForestClassifier(random_state=seed)
-        elif self.clf_unc_name == 'SVM':
-            clf_base = SVC(gamma='auto', probability=True, kernel='rbf', random_state=seed)
-
-        clf = SklearnClassifier(clf_base, classes=np.unique(y_train_lab))
-
-        # Merge the labeled and unlabeled data
-        x_ssl = np.concatenate((x_train_lab, x_train_unlab), axis=0)
-        y_ssl = np.concatenate((y_train_lab, [MISSING_LABEL]*len(x_train_unlab)), axis=0)
-
-        # takes one array with the already obtained labels and MISSING_LABEL otherwise
-        _, scores = qs.query(X=x_ssl, y=y_ssl, clf=clf, return_utilities=True)
-
-        return scores[0, len(x_train_lab):]
-
-# Package documentation: https://scikit-activeml.github.io/scikit-activeml-docs/latest/generated/api/skactiveml.pool.FourDs.html#skactiveml.pool.FourDs
-# Paper: https://doi.org/10.1016/j.ins.2012.11.015
-class DensityDiversitySampling(SamplingMethod):
-    def __init__(self):
-        super().__init__()
-        self.name += "GMM"
-        
-    def score(self, x_train_lab, x_train_unlab, y_train_lab, seed):
-        qs = SKFourDs(random_state=seed)
-        clf = MixtureModelClassifier(classes=np.unique(y_train_lab), 
-                                     mixture_model=GaussianMixture(n_components=5))
-
-        # Merge the labeled and unlabeled data
-        x_ssl = np.concatenate((x_train_lab, x_train_unlab), axis=0)
-        y_ssl = np.concatenate((y_train_lab, [MISSING_LABEL]*len(x_train_unlab)), axis=0)
-
-        # takes one array with the already obtained labels and MISSING_LABEL otherwise
-        _, scores = qs.query(X=x_ssl, y=y_ssl, clf=clf, return_utilities=True)
-        # query_idx, scores = qs.query(X=x_ssl, y=y_ssl, clf=clf, batch_size=4, return_utilities=True)
-
-        return scores[0, len(x_train_lab):]
-
-    # This is using diversity sampling, so we cannot choose samples based on their score; we need
-    #  to pass the sample size directly to the query method
-    def sample(self, x_train_lab, x_train_unlab, y_train_lab, n_sample, seed,
-               bracket=None, mean=None, sampling_strategy='highest'):
-        if bracket or mean:
-            raise NotImplementedError("Different sampling strategies are not implemented in diversity sampling.")
-
-        start_time = time.time()
-        qs = SKFourDs(random_state=seed)
-        clf = MixtureModelClassifier(classes=np.unique(y_train_lab), 
-                                     mixture_model=GaussianMixture(n_components=5))
-
-        # Merge the labeled and unlabeled data
-        x_ssl = np.concatenate((x_train_lab, x_train_unlab), axis=0)
-        y_ssl = np.concatenate((y_train_lab, [MISSING_LABEL]*len(x_train_unlab)), axis=0)
-
-        # takes one array with the already obtained labels and MISSING_LABEL otherwise
-        idcs, scores = qs.query(X=x_ssl, y=y_ssl, clf=clf, batch_size=n_sample, return_utilities=True)
-        end_time = time.time()
-
-        return x_train_unlab[idcs-len(x_train_lab)], [-1]*len(idcs), np.std(scores), end_time - start_time
 
 
 class ConsensusSampling(SamplingMethod):
@@ -367,63 +288,3 @@ class Autoencoder(nn.Module):
         decoded = self.decoder(encoded)
         return decoded
 
-
-"""
-DRAFT -- to be completed later
-"""
-# class MetaSamplingStrategy(SamplingMethod):
-#     def __init__(self, strategies, weights=None, combine_method='linear', name="MetaStrategy"):
-#         """
-#         Combine multiple strategies into a meta-strategy.
-#         """
-#         super().__init__(name=name)
-#         self.strategies = strategies
-#         self.weights = weights or [1.0] * len(strategies)
-#         self.combine_method = combine_method
-
-#     def score(self, x_train_lab, x_train_unlab, y_train_lab=None):
-#         """
-#         Combine scores from multiple strategies.
-#         """
-#         scores_list = [strategy.score(x_train_lab, x_train_unlab, y_train_lab) for strategy in self.strategies]
-#         scores_array = np.array(scores_list)
-
-#         if self.combine_method == 'linear':
-#             combined_scores = np.dot(self.weights, scores_array)
-#         elif self.combine_method == 'product':
-#             combined_scores = np.prod(scores_array ** np.array(self.weights), axis=0)
-#         else:
-#             raise ValueError("Invalid combine_method. Use 'linear' or 'product'.")
-
-#         return combined_scores
-
-# # Example:
-
-# strategies = {
-#     "random": RandomSampling(),
-#     "uncertainty": UncertaintySampling(),
-# }Unce
-
-# # Define meta-strategies
-# meta_strategies = {
-#     "meta_linear": MetaSamplingStrategy(
-#         strategies=[strategies["random"], strategies["uncertainty"]],
-#         weights=[0.7, 0.3],
-#         combine_method="linear"
-#     ),
-#     "meta_product": MetaSamplingStrategy(
-#         strategies=[strategies["random"], strategies["uncertainty"]],
-#         weights=[1.0, 1.0],
-#         combine_method="product"
-#     ),
-# }
-
-# # Combine all strategies
-# all_strategies = {**strategies, **meta_strategies}
-
-# # Compare strategies
-# n_sample = 10
-# for name, strategy in all_strategies.items():
-#     scores = strategy.score(x_train_lab, x_train_unlab)
-#     selected_indices = strategy.sample(scores, n_sample=n_sample)
-#     print(f"Strategy: {name}, Selected Indices: {selected_indices}")
