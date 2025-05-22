@@ -183,10 +183,16 @@ class ConsensusSampling(SamplingMethod):
     def score(self, x_train_lab, x_train_unlab, y_train_lab, seed):
         rng = np.random.default_rng(seed)
         n_features = x_train_lab.shape[1]
+        n_bootstrap = len(x_train_lab)
         predictions = []
         x_train_concat = np.concatenate((x_train_lab, x_train_unlab))
         
         for n in range(self.n_clf_base):
+            # Create bootstrap sample of the data
+            bootstrap_indices = rng.choice(n_bootstrap, size=n_bootstrap, replace=True)
+            x_bootstrap = x_train_lab[bootstrap_indices]
+            y_bootstrap = y_train_lab[bootstrap_indices]
+
             # draw sqrt(n_features) without replacement
             feat_idx = rng.choice(n_features, size=int(sqrt(n_features)), replace=False)
             self.clfs_feature_subsets.append(feat_idx)
@@ -194,12 +200,14 @@ class ConsensusSampling(SamplingMethod):
             # train base classifier & predict unlabeled set
             if self.clf_base_name == 'DT':
                 clf = DecisionTreeClassifier(random_state=seed + n)
-                clf.fit(x_train_lab[:, feat_idx], y_train_lab)
+                clf.fit(x_bootstrap[:, feat_idx], y_bootstrap)
+                # clf.fit(x_train_lab[:, feat_idx], y_train_lab)
                 self.clfs_base.append(clf)
                 predictions.append(clf.predict(x_train_unlab[:, feat_idx]))
             elif self.clf_base_name == 'DS':
                 clf = DecisionTreeClassifier(random_state=seed + n, max_depth=self.ds_max_depth)
-                clf.fit(x_train_lab[:, feat_idx], y_train_lab)
+                clf.fit(x_bootstrap[:, feat_idx], y_bootstrap)
+                # clf.fit(x_train_lab[:, feat_idx], y_train_lab)
                 self.clfs_base.append(clf)
                 predictions.append(clf.predict(x_train_unlab[:, feat_idx]))
             elif self.clf_base_name == 'AE':
