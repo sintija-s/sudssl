@@ -183,7 +183,7 @@ class ConsensusSampling(SamplingMethod):
     def score(self, x_train_lab, x_train_unlab, y_train_lab, seed):
         rng = np.random.default_rng(seed)
         n_features = x_train_lab.shape[1]
-        n_bootstrap = len(x_train_lab)
+        n_bootstrap = int(len(x_train_lab)/2)
         predictions = []
         x_train_concat = np.concatenate((x_train_lab, x_train_unlab))
         
@@ -194,7 +194,7 @@ class ConsensusSampling(SamplingMethod):
             y_bootstrap = y_train_lab[bootstrap_indices]
 
             # draw sqrt(n_features) without replacement
-            feat_idx = rng.choice(n_features, size=int(sqrt(n_features)), replace=False)
+            feat_idx = rng.choice(n_features, size=int(sqrt(n_features)/2), replace=False)
             self.clfs_feature_subsets.append(feat_idx)
             
             # train base classifier & predict unlabeled set
