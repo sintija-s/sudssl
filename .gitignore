@@ -25,6 +25,7 @@ desktop.ini
 *.egg-info/
 dist/
 build/
+.vscode
 
 # Cache files
 *.cache
@@ -33,7 +34,7 @@ build/
 
 
 # Ignore everything in the results folder
-*results*/*
+results/*
 *.zip
 
 *missing_combinations*
