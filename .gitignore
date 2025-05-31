@@ -25,6 +25,7 @@ desktop.ini
 *.egg-info/
 dist/
 build/
+.vscode
 
 # Cache files
 *.cache
@@ -34,4 +35,7 @@ build/
 
 # Ignore everything in the results folder
 results/*
+*.zip
 
+*missing_combinations*
+merge_results.py
