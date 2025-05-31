@@ -37,5 +37,14 @@ build/
 results/*
 *.zip
 
+# Allow aggregated results
+!results/aggregated_results/*
+
 *missing_combinations*
 merge_results.py
+
+# Ignore virtual environment
+.venv/*
+
+# Ignore plots
+plots/*
