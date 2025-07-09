@@ -25,6 +25,7 @@ desktop.ini
 *.egg-info/
 dist/
 build/
+.vscode
 
 # Cache files
 *.cache
@@ -33,8 +34,17 @@ build/
 
 
 # Ignore everything in the results folder
-*results*/*
+results/*
 *.zip
+
+# Allow aggregated results
+!results/aggregated_results/*
 
 *missing_combinations*
 merge_results.py
+
+# Ignore virtual environment
+.venv/*
+
+# Ignore plots
+plots/*
