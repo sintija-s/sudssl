@@ -15,6 +15,15 @@ tabular self-supervised classifier while cutting down computation costs.
 Built using Python 3.12.2.
 
 
+## Additional Results
+
+Additional results for each evaluation stream can be found in the corresponding Jupyter notebooks:
+- [i. Downstream Performance](1_evaluation_downstream_performance.ipynb)
+- [ii. Embedding](2_evaluation_embedding.ipynb)
+- [iii. Time](3_evaluation_time.ipynb)
+  
+For a more detailed analysis of the results, we offer the raw results upon request (as they are quite large). Please contact us in this case: [sintija.stevanoska@ijs.si](mailto:sintija.stevanoska@ijs.si).
+
 
 ## Creating a virtual environment (Recommended):
 ```bash
@@ -65,7 +74,7 @@ Arguments:
 - `--n_unlabeled`: Number of unlabeled examples to select; used only when `--sampling_method` is "random", "consensus_ds", or "consensus_dt".
 - `--bracket`: Sampling bracket, put it as `"[minimum_value, maximum_value]"`; used only when `--sampling_method` is either "consensus_ds", or "consensus_dt".
 
-# Extracting metafeatures
+## Extracting metafeatures
 
 To extract metafeatures for a dataset, run the `extract_metafeatures.py`.
 It produces a .csv file which has the selected metafeatures for 3 random seeds (including the averaged values in the last line). 
