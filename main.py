@@ -74,6 +74,7 @@ def run_single_exp(
     dataset_to_process,
     bracket=None,
     mean=None,
+    do_hpo=False,
 ):
 
     single_results = []
@@ -104,7 +105,8 @@ def run_single_exp(
     )
 
     # Train the model and evaluate metrics
-    with contextlib.redirect_stdout(None):
+    # with contextlib.redirect_stdout(None):
+    if 0==0:
         if model == "tabnet":
             y_pred, y_pred_proba, model_time = models.run_selfsl_tabnet(
                 x_train_lab,
@@ -123,6 +125,7 @@ def run_single_exp(
                 bracket,
                 dataset_to_process,
                 sampling_method=str(sampling),
+                do_hpo=do_hpo,
             )
 
         elif model == "scarf":
@@ -143,6 +146,7 @@ def run_single_exp(
                 bracket,
                 dataset_to_process,
                 sampling_method=str(sampling),
+                do_hpo=do_hpo,
             )
 
     performance_dict = create_performance_dict(
@@ -172,7 +176,7 @@ def run_single_exp(
 
 
 def main(
-    model, dataset_to_process, seed, n_labeled, sampling_method, n_unlabeled, bracket
+    model, dataset_to_process, seed, n_labeled, sampling_method, n_unlabeled, bracket, do_hpo
 ):
     sampling_method_map = {
         "random": sampling.RandomSampling,
@@ -237,6 +241,7 @@ def main(
             categorical_col_indices,
             unique_vals_within_category,
             dataset_to_process=dataset_to_process,
+            do_hpo=do_hpo,
         )
         file_path = os.path.join(
             result_dir, f"{seed}_{n_labeled}_{sampling_method}_{model}.csv"
@@ -258,6 +263,7 @@ def main(
             categorical_col_indices,
             unique_vals_within_category,
             dataset_to_process=dataset_to_process,
+            do_hpo=do_hpo,
         )
 
         file_path = os.path.join(
@@ -282,6 +288,7 @@ def main(
             unique_vals_within_category,
             bracket=bracket,
             dataset_to_process=dataset_to_process,
+            do_hpo=do_hpo,
         )
 
         file_path = os.path.join(
@@ -359,6 +366,11 @@ if __name__ == "__main__":
         default="",
         help="Sampling bracket. Options: [0, 40], [20, 60], [40, 80], [60, 100]",
     )
+    parser.add_argument(
+        "--do_hpo",
+        action="store_true",
+        help="Whether to perform hyperparameter optimization for TabNet before training."
+    )
     args = parser.parse_args()
 
     validate_arguments(args)
@@ -371,4 +383,5 @@ if __name__ == "__main__":
         sampling_method=args.sampling_method,
         n_unlabeled=args.n_unlabeled,
         bracket=args.bracket,
+        do_hpo=args.do_hpo,
     )

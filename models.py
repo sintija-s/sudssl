@@ -18,6 +18,7 @@ from sklearn.metrics import (
     classification_report,
 )
 from torch.optim import Adam
+import config
 from torch.utils.data import DataLoader
 
 import scarf
@@ -130,11 +131,11 @@ def evaluate_pretraining_quality(
 
     # Combine labeled and unlabeled embeddings for clustering evaluation
     if x_train_unlab.shape[0] > 0:
-        combined_emb = np.vstack([train_lab_emb, train_unlab_emb])
-        combined_labels = np.concatenate([y_train_lab, [-1] * len(train_unlab_emb)])
+        combined_emb = np.vstack([train_lab_emb, train_unlab_emb, val_emb, test_emb])
+        combined_labels = np.concatenate([y_train_lab, [-1] * len(train_unlab_emb), y_val, y_test])
     else:
-        combined_emb = train_lab_emb.copy()
-        combined_labels = y_train_lab.copy()
+        combined_emb = np.vstack([train_lab_emb, val_emb, test_emb])
+        combined_labels = np.concatenate([y_train_lab, y_val, y_test])
 
     valid_labels_mask = combined_labels != -1
 
@@ -551,58 +552,72 @@ def run_selfsl_tabnet(
     bracket,
     ds,
     sampling_method,
+    do_hpo=False,
 ):
     set_seeds(seed=seed)
 
-    clf = TabNetClassifier(
-        seed=seed,
-        cat_idxs=categorical_column_idx,
-        cat_dims=unique_vals_within_category,
-        optimizer_fn=torch.optim.Adam,
-        optimizer_params=dict(lr=1e-3),
-        scheduler_params={"step_size": 50, "gamma": 0.95},
-        scheduler_fn=torch.optim.lr_scheduler.StepLR,
-        mask_type="entmax",
-        n_steps=3,
-        gamma=1.3,
-        n_d=16,
-        n_a=16,
-        lambda_sparse=1e-4,
-        momentum=0.3,
-    )
+    if do_hpo:
+        from hpo import run_complete_hpo
+        # Pretrainer HPO: use both labeled and unlabeled data
+        pretrain_X = np.concatenate((x_train_lab, x_train_unlab), axis=0)
+        pretrain_y = np.concatenate((y_train_lab, y_train_unl), axis=0)
+        # Classifier HPO: use only labeled data
+        clf_X = x_train_lab
+        clf_y = y_train_lab
+        hpo_results = run_complete_hpo(
+            pretrain_X=pretrain_X,
+            pretrain_y=pretrain_y,
+            clf_X=clf_X,
+            clf_y=clf_y,
+            cat_idxs=categorical_column_idx,
+            cat_dims=unique_vals_within_category,
+            pretrainer_trials=config.tabnet_parameters['hpo_pretrainer_trials'],
+            classifier_trials=config.tabnet_parameters['hpo_classifier_trials'],
+            n_splits=3,
+            seed=seed
+        )
+        pretrainer_params = hpo_results['pretrainer']['best_params']
+        pretrainer_params['optimizer_params'] = {'lr': pretrainer_params['lr']}
+        classifier_params = hpo_results['classifier']['best_params']
+        classifier_params['optimizer_params'] = {'lr': classifier_params['lr']}
+    else:
+        pretrainer_params = dict(
+            n_d=16, n_a=16, n_steps=3, gamma=1.3, lambda_sparse=1e-4, momentum=0.3,
+            optimizer_params=dict(lr=1e-3), n_shared=2, n_independent=2, pretraining_ratio=0.8
+        )
+        classifier_params = dict(
+            n_d=16, n_a=16, n_steps=3, gamma=1.3, lambda_sparse=1e-4, momentum=0.3,
+            optimizer_params=dict(lr=1e-3), n_shared=2, n_independent=2
+        )
 
     start_time = time.time()
 
+    # Pretraining
     pretrain_arr = np.concatenate((x_train_lab, x_train_unlab), axis=0)
-
     unsupervised_model = TabNetPretrainer(
         seed=seed,
         cat_idxs=categorical_column_idx,
         cat_dims=unique_vals_within_category,
-        optimizer_fn=torch.optim.Adam,
-        optimizer_params=dict(lr=1e-3),
-        scheduler_params={"step_size": 50, "gamma": 0.95},
-        scheduler_fn=torch.optim.lr_scheduler.StepLR,
-        mask_type="entmax",
-        n_steps=3,
-        gamma=1.3,
-        n_d=16,
-        n_a=16,
-        lambda_sparse=1e-4,
-        momentum=0.3,
+        n_d=pretrainer_params['n_d'],
+        n_a=pretrainer_params['n_a'],
+        n_steps=pretrainer_params['n_steps'],
+        gamma=pretrainer_params['gamma'],
+        lambda_sparse=pretrainer_params['lambda_sparse'],
+        momentum=pretrainer_params['momentum'],
+        optimizer_params=pretrainer_params['optimizer_params'],
+        n_shared=pretrainer_params['n_shared'],
+        n_independent=pretrainer_params['n_independent'],
     )
-
-    # Calculate batch_size for pretrainer
     n_pretrain_samples = len(pretrain_arr)
     bs_pretrain = 256
     while n_pretrain_samples % bs_pretrain == 1:
         bs_pretrain += 1
-
     unsupervised_model.fit(
         X_train=pretrain_arr,
-        pretraining_ratio=0.8,
+        pretraining_ratio=pretrainer_params['pretraining_ratio'],
         batch_size=bs_pretrain,
-        patience=10,
+        max_epochs=config.tabnet_parameters['max_epochs_pretrain'],
+        patience=config.tabnet_parameters['patience'],
         drop_last=False,
     )
     evaluate_pretraining_quality(
@@ -622,13 +637,25 @@ def run_selfsl_tabnet(
         sampling_method=sampling_method,
         model="tabnet",
     )
-
-    # Calculate batch_size for classifier
+    # Classifier
     n_clf_samples = len(x_train_lab)
     bs_clf = 64
-
     while n_clf_samples % bs_clf == 1:
         bs_clf += 1
+    clf = TabNetClassifier(
+        seed=seed,
+        cat_idxs=categorical_column_idx,
+        cat_dims=unique_vals_within_category,
+        n_d=classifier_params['n_d'],
+        n_a=classifier_params['n_a'],
+        n_steps=classifier_params['n_steps'],
+        gamma=classifier_params['gamma'],
+        lambda_sparse=classifier_params['lambda_sparse'],
+        momentum=classifier_params['momentum'],
+        optimizer_params=classifier_params['optimizer_params'],
+        n_shared=classifier_params['n_shared'],
+        n_independent=classifier_params['n_independent'],
+    )
 
     clf.fit(
         x_train_lab,
@@ -637,17 +664,15 @@ def run_selfsl_tabnet(
         eval_name=["valid"],
         from_unsupervised=unsupervised_model,
         eval_metric=["accuracy"],
-        patience=50,
+        max_epochs=config.tabnet_parameters['max_epochs_classifier'],
+        patience=config.tabnet_parameters['patience'],
         batch_size=bs_clf,
         drop_last=False,
     )
-
     end_time = time.time()
     execution_time = end_time - start_time
-
     clf.network.eval()
     with torch.no_grad():
         y_test_predictions = clf.predict(x_test)
         y_test_probabilities = clf.predict_proba(x_test)
-
     return y_test_predictions, y_test_probabilities, execution_time

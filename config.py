@@ -18,3 +18,9 @@ N_LABELED=[50, 100, 150, 200, 350, 500, 750, 1000]
 SAMPLING_METHOD=['random', 'consensus_ds', 'consensus_dt', 'baseline_all', 'baseline_none']
 N_UNLABELED=[100, 250, 500, 750, 1000]
 BRACKETS =["[0, 40]", "[20, 60]", '[40, 80]', '[60, 100]']
+
+tabnet_parameters = {'patience':10,
+                     'max_epochs_pretrain':1000,
+                     'max_epochs_classifier':200,
+                     'hpo_classifier_trials':50,
+                     'hpo_pretrainer_trials':50}
